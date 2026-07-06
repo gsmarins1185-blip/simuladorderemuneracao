@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const nav = document.createElement('nav');
   nav.style.cssText = 'display:flex; gap:28px; justify-content:center; flex-wrap:wrap; ' +
-    'max-width:880px; margin:0 auto 18px; border-bottom:1px solid var(--borda, #e5e9f0);';
+    'max-width:1040px; margin:0 auto 18px; border-bottom:1px solid var(--borda, #e5e9f0);';
   nav.appendChild(aba('Ativos', 'index.html'));
   nav.appendChild(aba('Veteranos', 'Calculadora_Veterano.html'));
 
@@ -290,6 +290,19 @@ document.addEventListener('DOMContentLoaded', function () {
       makeRow('', '(\u2212) FUSPOM (<span id="t-fuspom-p">0</span>%) <span class="badge-aux">fundo de saúde · sobre o soldo</span>', 't-fuspom', 'neg'),
       contribRow.nextSibling);
   }
+  const brutaRow = rowOf('t-rem-bruta');
+  if (brutaRow && !document.getElementById('t-gratcmd')) {
+    brutaRow.parentNode.insertBefore(makeRow('', 'Grat. de Comando PMERJ', 't-gratcmd', 'pos'), brutaRow);
+  }
+  if (brutaRow && !document.getElementById('t-abono')) {
+    brutaRow.parentNode.insertBefore(makeRow('', 'Abono de Permanência', 't-abono', 'pos'), brutaRow);
+  }
+  const liqRow = rowOf('t-liquido');
+  if (liqRow && !document.getElementById('t-abate')) {
+    liqRow.parentNode.insertBefore(
+      makeRow('', '(−) Abate-teto <span class="badge-aux">limite remuneratório</span>', 't-abate', 'neg'),
+      liqRow);
+  }
 });
 
 // ===== Controle Dif-Posto/Grad: checkbox + seletor de posto substituto (acima do atual) =====
@@ -309,8 +322,8 @@ document.addEventListener('DOMContentLoaded', function () {
         '<label for="dif-posto" style="font-weight:600;display:block;margin-bottom:4px;">Posto/Graduação substituto (acima do atual)</label>' +
         '<select id="dif-posto"></select>' +
       '</div>' +
-      '<div id="dif-nota-cel" class="hint" style="display:none;">Coronel: não há posto acima — a Dif equivale a 20% do próprio soldo.</div>' +
-      '<div class="hint" style="margin-top:6px;">A diferença de soldo entra na base de todas as gratificações e na Remuneração Básica.</div>' +
+      '<div id="dif-nota-cel" class="hint" style="display:none; font-size:12px; font-style: italic">Coronel: não há posto acima — a Dif equivale a 20% do próprio soldo.</div>' +
+      '<div class="hint" style="margin-top:6px; font-size:12px; font-style: italic">A diferença de soldo entra na base de todas as gratificações e na Remuneração Básica.</div>' +
     '</div>';
   fieldPosto.parentNode.insertBefore(box, fieldPosto.nextSibling);
 
@@ -323,6 +336,9 @@ document.addEventListener('DOMContentLoaded', function () {
   function popularSubstitutos() {
     const idx = posto.selectedIndex;
     const ehCel = posto.options[idx].textContent.trim() === 'Cel PM';
+    // Ativos: Coronel é o último posto e não recebe Dif — esconde a seção inteira.
+    box.style.display = ehCel ? 'none' : '';
+    if (ehCel) { chk.checked = false; wrap.style.display = 'none'; }
     const anterior = selDif.value;
     selDif.innerHTML = '';
     for (let i = 0; i < idx; i++) {                 // índices menores = postos acima
@@ -332,10 +348,9 @@ document.addEventListener('DOMContentLoaded', function () {
       op.textContent = o.textContent.trim();
       selDif.appendChild(op);
     }
-    // Coronel: sem posto acima -> esconde o seletor e mostra a nota (Dif = 20% do soldo).
-    chk.disabled = false;                            // sempre disponível
-    selGroup.style.display = ehCel ? 'none' : 'block';
-    notaCel.style.display = ehCel ? 'block' : 'none';
+    chk.disabled = false;
+    selGroup.style.display = 'block';
+    notaCel.style.display = 'none';
     if (anterior) {
       for (let i = 0; i < selDif.options.length; i++) {
         if (selDif.options[i].value === anterior) { selDif.selectedIndex = i; break; }
@@ -454,6 +469,20 @@ document.addEventListener('DOMContentLoaded', function () {
     btnAddDesc.textContent = cheio ? 'Limite de 5 descontos atingido' : '+ Adicionar desconto';
   }
 
+  // Confirmação dos campos dinâmicos: o valor só entra no cálculo ao clicar "Confirmar".
+  function marcarPendente(inp) {
+    const item = inp.closest('.field');
+    const btn = item ? item.querySelector('.campo-ok') : null;
+    if (btn) { btn.style.background = 'var(--acento)'; btn.style.color = '#fff'; }
+  }
+  function confirmarCampo(btn) {
+    const item = btn.closest('.field');
+    const inp = item ? item.querySelector('input[type=number]') : null;
+    if (inp) inp.dataset.commit = inp.value || '0';
+    btn.style.background = ''; btn.style.color = ''; btn.textContent = '\u2713';
+    calcular();
+  }
+
   // cria um novo campo de desconto discricionário (se não estourar o limite)
   function criarCampoDesc() {
     if (!listaDesc || listaDesc.children.length >= MAX_DESCONTOS) return;
@@ -463,9 +492,10 @@ document.addEventListener('DOMContentLoaded', function () {
     item.innerHTML =
       '<div class="money-row" style="flex:1;">' +
         '<span class="money-prefix">R$</span>' +
-        '<input type="number" class="desc-disc-input" value="0" min="0" step="0.01" inputmode="decimal" style="color: var(--vermelho);">' +
+        '<input type="number" class="desc-disc-input" data-commit="0" value="0" min="0" step="0.01" inputmode="decimal" style="color: var(--vermelho);">' +
       '</div>' +
-      '<button type="button" class="cen-btn desc-disc-rem" style="width:auto; padding:9px 12px;" title="Remover">×</button>';
+      '<button type="button" class="cen-btn campo-ok" style="flex:0 0 auto; width:auto; padding:5px 8px; font-size:13px; line-height:1;" title="Confirmar (efetivar valor)">✓</button>' +
+      '<button type="button" class="cen-btn desc-disc-rem" style="flex:0 0 auto; width:auto; padding:5px 8px; font-size:13px; line-height:1;" title="Remover">×</button>';
     listaDesc.appendChild(item);
     atualizarBtnAdd();
   }
@@ -488,9 +518,10 @@ document.addEventListener('DOMContentLoaded', function () {
     item.innerHTML =
       '<div class="money-row" style="flex:1;">' +
         '<span class="money-prefix">R$</span>' +
-        '<input type="number" class="pensao-input" value="0" min="0" step="0.01" inputmode="decimal" style="color: var(--vermelho);">' +
+        '<input type="number" class="pensao-input" data-commit="0" value="0" min="0" step="0.01" inputmode="decimal" style="color: var(--vermelho);">' +
       '</div>' +
-      '<button type="button" class="cen-btn pensao-rem" style="width:auto; padding:9px 12px;" title="Remover">×</button>';
+      '<button type="button" class="cen-btn campo-ok" style="flex:0 0 auto; width:auto; padding:5px 8px; font-size:13px; line-height:1;" title="Confirmar (efetivar valor)">✓</button>' +
+      '<button type="button" class="cen-btn pensao-rem" style="flex:0 0 auto; width:auto; padding:5px 8px; font-size:13px; line-height:1;" title="Remover">×</button>';
     listaPensao.appendChild(item);
     atualizarBtnAddPensao();
   }
@@ -514,11 +545,12 @@ document.addEventListener('DOMContentLoaded', function () {
       '<input type="text" class="vant-nome" placeholder="Nome do vencimento" ' +
         'style="flex:1; padding:10px 12px; border:1.5px solid var(--borda); border-radius:10px; ' +
         'font-size:14px; font-family:inherit; color:var(--texto); background:#fff;">' +
-      '<div class="money-row" style="flex:0 0 130px;">' +
+      '<div class="money-row" style="flex:0 0 160px;">' +
         '<span class="money-prefix">R$</span>' +
-        '<input type="number" class="vant-valor" value="0" min="0" step="0.01" inputmode="decimal">' +
+        '<input type="number" class="vant-valor" data-commit="0" value="0" min="0" step="0.01" inputmode="decimal">' +
       '</div>' +
-      '<button type="button" class="cen-btn vant-rem" style="width:auto; padding:9px 12px;" title="Remover">×</button>';
+      '<button type="button" class="cen-btn campo-ok" style="flex:0 0 auto; width:auto; padding:5px 8px; font-size:13px; line-height:1;" title="Confirmar (efetivar valor)">✓</button>' +
+      '<button type="button" class="cen-btn vant-rem" style="flex:0 0 auto; width:auto; padding:5px 8px; font-size:13px; line-height:1;" title="Remover">×</button>';
     listaVant.appendChild(item);
     atualizarBtnAddVant();
   }
@@ -542,11 +574,12 @@ document.addEventListener('DOMContentLoaded', function () {
       '<input type="text" class="vind-nome" placeholder="Ex.: Aux. Transporte" ' +
         'style="flex:1; padding:10px 12px; border:1.5px solid var(--borda); border-radius:10px; ' +
         'font-size:14px; font-family:inherit; color:var(--texto); background:#fff;">' +
-      '<div class="money-row" style="flex:0 0 130px;">' +
+      '<div class="money-row" style="flex:0 0 160px;">' +
         '<span class="money-prefix">R$</span>' +
-        '<input type="number" class="vind-valor" value="0" min="0" step="0.01" inputmode="decimal">' +
+        '<input type="number" class="vind-valor" data-commit="0" value="0" min="0" step="0.01" inputmode="decimal">' +
       '</div>' +
-      '<button type="button" class="cen-btn vind-rem" style="width:auto; padding:9px 12px;" title="Remover">×</button>';
+      '<button type="button" class="cen-btn campo-ok" style="flex:0 0 auto; width:auto; padding:5px 8px; font-size:13px; line-height:1;" title="Confirmar (efetivar valor)">✓</button>' +
+      '<button type="button" class="cen-btn vind-rem" style="flex:0 0 auto; width:auto; padding:5px 8px; font-size:13px; line-height:1;" title="Remover">×</button>';
     listaVind.appendChild(item);
     atualizarBtnAddVind();
   }
@@ -597,7 +630,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let totalVant = 0;
     if (listaVant) {
       listaVant.querySelectorAll('.vant-valor').forEach(function (inp) {
-        totalVant += parseFloat(String(inp.value).replace(',', '.')) || 0;
+        totalVant += parseFloat(String(inp.dataset.commit).replace(',', '.')) || 0;
       });
     }
 
@@ -605,17 +638,33 @@ document.addEventListener('DOMContentLoaded', function () {
     let totalVind = 0;
     if (listaVind) {
       listaVind.querySelectorAll('.vind-valor').forEach(function (inp) {
-        totalVind += parseFloat(String(inp.value).replace(',', '.')) || 0;
+        totalVind += parseFloat(String(inp.dataset.commit).replace(',', '.')) || 0;
       });
     }
 
-    const remBruta = remBasica + totalVant + totalVind;
+    // Gratificações de Comando PMERJ (fora da Rem. Básica, da Contribuição e do teto)
+    let totalGratCmd = 0;
+    document.querySelectorAll('.gratcmd-valor').forEach(function (inp) {
+      totalGratCmd += parseFloat(String(inp.dataset.commit).replace(',', '.')) || 0;
+    });
+
+    // Teto Constitucional (limite remuneratório)
+    const TETO_CONST = 41845.48;
+    // Contribuição Militar (base limitada ao teto) — calculada aqui pois o Abono depende dela
+    const contribMil = Math.min(remBasica, TETO_CONST) * CONTRIB_MIL_PCT / 100;
+    // Abono de Permanência: devolve o valor da contribuição; tributável; entra na Bruta
+    const chkAbono = document.getElementById('abono-chk');
+    const abono = (chkAbono && chkAbono.checked) ? contribMil : 0;
+
+    const remBruta = remBasica + totalVant + totalVind + totalGratCmd + abono;
+
+    const baseTeto = remBasica + totalVant;   // sujeito ao teto (fora: indenizatórias, Grat Comando, Abono)
+    const abateTeto = Math.max(0, baseTeto - TETO_CONST);
 
     // dependentes (IR)
     const dep = selDep ? (parseInt(selDep.value, 10) || 0) : 0;
 
     // descontos
-    const contribMil = remBasica * CONTRIB_MIL_PCT / 100;  // Contribuição Militar (previdência)
     const fuspom     = soldo * fusPct / 100;               // FUSPOM (somente sobre o soldo)
 
     // descontos discricionários: soma dos campos, limitada a 40% da Rem. Básica
@@ -623,7 +672,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let somaDisc = 0;
     if (listaDesc) {
       listaDesc.querySelectorAll('.desc-disc-input').forEach(function (inp) {
-        somaDisc += parseFloat(String(inp.value).replace(',', '.')) || 0;
+        somaDisc += parseFloat(String(inp.dataset.commit).replace(',', '.')) || 0;
       });
     }
     const descDisc = Math.min(Math.max(somaDisc, 0), capDisc);
@@ -634,7 +683,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let pensao = 0;
     if (listaPensao) {
       listaPensao.querySelectorAll('.pensao-input').forEach(function (inp) {
-        pensao += parseFloat(String(inp.value).replace(',', '.')) || 0;
+        pensao += parseFloat(String(inp.dataset.commit).replace(',', '.')) || 0;
       });
     }
 
@@ -648,13 +697,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const parUsado = (parLegal < DESC_SIMPL) ? DESC_SIMPL : parLegal; // desconto simplificado se for maior
     // isenção da GRAM no IR: se marcada, abate a GRAM da base de cálculo (não mexe no Rend. Tributável)
     const abateGram = (chkIsencaoGram && chkIsencaoGram.checked) ? gram : 0;
-    const baseIR   = Math.max(0, remBruta - totalVind - parUsado - fuspom - pensao - abateGram);
+    const baseIR   = Math.max(0, remBruta - totalVind - parUsado - fuspom - pensao - abateGram - abateTeto);
     const irBruto  = irTabela(baseIR);
     const reducao  = redutorIR(rendTrib, irBruto);
     const irrf     = Math.max(0, irBruto - reducao);
 
     // Remuneração Líquida = Rem. Bruta − todos os descontos
-    const totalDescontos = contribMil + fuspom + descDisc + irrf + pensao;
+    const totalDescontos = contribMil + fuspom + descDisc + irrf + pensao + abateTeto;
     const liquido = remBruta - totalDescontos;
 
     // marcadores (.big-num)
@@ -676,6 +725,8 @@ document.addEventListener('DOMContentLoaded', function () {
     set('t-rem-basica', fmt.format(remBasica));
     set('t-vant', '+ ' + fmt.format(totalVant));
     set('t-vind', '+ ' + fmt.format(totalVind));
+    set('t-gratcmd', '+ ' + fmt.format(totalGratCmd));
+    set('t-abono', '+ ' + fmt.format(abono));
     set('t-rem-bruta', fmt.format(remBruta));
     set('t-contrib', '− ' + fmt.format(contribMil));
     set('t-fuspom-p', pct(fusPct));
@@ -683,6 +734,7 @@ document.addEventListener('DOMContentLoaded', function () {
     set('t-desc-disc', '− ' + fmt.format(descDisc));
     set('t-irrf', '− ' + fmt.format(irrf));
     set('t-pensao', '− ' + fmt.format(pensao));
+    set('t-abate', '− ' + fmt.format(abateTeto));
     set('t-liquido', fmt.format(liquido));
   }
 
@@ -696,9 +748,10 @@ document.addEventListener('DOMContentLoaded', function () {
   if (btnAddVind) btnAddVind.addEventListener('click', function () { criarCampoVind(); calcular(); });
   if (listaVind) {
     listaVind.addEventListener('input', function (e) {
-      if (e.target && e.target.classList.contains('vind-valor')) calcular();
+      if (e.target && e.target.classList.contains('vind-valor')) marcarPendente(e.target);
     });
     listaVind.addEventListener('click', function (e) {
+      if (e.target && e.target.classList.contains('campo-ok')) { confirmarCampo(e.target); return; }
       if (e.target && e.target.classList.contains('vind-rem')) {
         const item = e.target.closest('.vind-item');
         if (item) item.remove();
@@ -713,9 +766,10 @@ document.addEventListener('DOMContentLoaded', function () {
   if (btnAddVant) btnAddVant.addEventListener('click', function () { criarCampoVant(); calcular(); });
   if (listaVant) {
     listaVant.addEventListener('input', function (e) {
-      if (e.target && e.target.classList.contains('vant-valor')) calcular();
+      if (e.target && e.target.classList.contains('vant-valor')) marcarPendente(e.target);
     });
     listaVant.addEventListener('click', function (e) {
+      if (e.target && e.target.classList.contains('campo-ok')) { confirmarCampo(e.target); return; }
       if (e.target && e.target.classList.contains('vant-rem')) {
         const item = e.target.closest('.vant-item');
         if (item) item.remove();
@@ -730,9 +784,10 @@ document.addEventListener('DOMContentLoaded', function () {
   if (btnAddDesc) btnAddDesc.addEventListener('click', function () { criarCampoDesc(); calcular(); });
   if (listaDesc) {
     listaDesc.addEventListener('input', function (e) {
-      if (e.target && e.target.classList.contains('desc-disc-input')) calcular();
+      if (e.target && e.target.classList.contains('desc-disc-input')) marcarPendente(e.target);
     });
     listaDesc.addEventListener('click', function (e) {
+      if (e.target && e.target.classList.contains('campo-ok')) { confirmarCampo(e.target); return; }
       if (e.target && e.target.classList.contains('desc-disc-rem')) {
         const item = e.target.closest('.desc-disc-item');
         if (item) item.remove();
@@ -747,9 +802,10 @@ document.addEventListener('DOMContentLoaded', function () {
   if (btnAddPensao) btnAddPensao.addEventListener('click', function () { criarCampoPensao(); calcular(); });
   if (listaPensao) {
     listaPensao.addEventListener('input', function (e) {
-      if (e.target && e.target.classList.contains('pensao-input')) calcular();
+      if (e.target && e.target.classList.contains('pensao-input')) marcarPendente(e.target);
     });
     listaPensao.addEventListener('click', function (e) {
+      if (e.target && e.target.classList.contains('campo-ok')) { confirmarCampo(e.target); return; }
       if (e.target && e.target.classList.contains('pensao-rem')) {
         const item = e.target.closest('.pensao-item');
         if (item) item.remove();
@@ -784,4 +840,81 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   calcular(); // cálculo inicial com os valores padrão
+});
+
+
+// ===== Card "Gratificações de Comando PMERJ" (só ativos), abaixo de Outras Vantagens =====
+document.addEventListener('DOMContentLoaded', function () {
+  const vantLista = document.getElementById('vant-lista');
+  const cardVant = vantLista ? vantLista.closest('.card') : null;
+  if (!cardVant) return;
+  const posto = document.getElementById('posto');
+  function campo(rotulo, id) {
+    return '<div class="field" style="display:flex; gap:8px; align-items:center;">' +
+      '<label style="flex:1; margin:0;">' + rotulo + '</label>' +
+      '<div class="money-row" style="flex:0 0 160px;">' +
+        '<span class="money-prefix">R$</span>' +
+        '<input type="number" class="gratcmd-valor" id="' + id + '" data-commit="0" value="0" min="0" step="0.01" inputmode="decimal">' +
+      '</div>' +
+      '<button type="button" class="cen-btn campo-ok" style="flex:0 0 auto; width:auto; padding:5px 8px; font-size:13px; line-height:1;" title="Confirmar (efetivar valor)">✓</button>' +
+    '</div>';
+  }
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.style.marginTop = '16px';
+  card.innerHTML =
+    '<h2>Gratificações de Comando PMERJ</h2>' +
+    campo('Subsídio / GEE Comando PMERJ', 'gc-subsidio') +
+    campo('Verba de Representação de Cargo', 'gc-representacao') +
+    campo('Cargo em Comissão', 'gc-comissao') +
+    '<div class="hint-exp">Entram na Remuneração Bruta e na base do IRPF; ficam fora da Remuneração Básica, da Contribuição e do abate-teto.</div>';
+  cardVant.parentNode.insertBefore(card, cardVant.nextSibling);
+
+  // Grat de Comando: exclusiva de Ten Cel PM e Cel PM. Esconde (e zera) nos demais.
+  function atualizarVisibilidade() {
+    const p = posto ? posto.options[posto.selectedIndex].textContent.trim() : '';
+    const podeTer = (p === 'Cel PM' || p === 'Ten Cel PM');
+    card.style.display = podeTer ? '' : 'none';
+    if (!podeTer) {
+      card.querySelectorAll('.gratcmd-valor').forEach(function (inp) {
+        inp.value = '0'; inp.dataset.commit = '0';
+      });
+    }
+  }
+  if (posto) posto.addEventListener('change', atualizarVisibilidade);
+  atualizarVisibilidade();
+
+  card.addEventListener('input', function (e) {
+    if (e.target && e.target.classList.contains('gratcmd-valor')) {
+      const item = e.target.closest('.field');
+      const btn = item ? item.querySelector('.campo-ok') : null;
+      if (btn) { btn.style.background = 'var(--acento)'; btn.style.color = '#fff'; }
+    }
+  });
+  card.addEventListener('click', function (e) {
+    if (e.target && e.target.classList.contains('campo-ok')) {
+      const item = e.target.closest('.field');
+      const inp = item ? item.querySelector('input[type=number]') : null;
+      if (inp) inp.dataset.commit = inp.value || '0';
+      e.target.style.background = ''; e.target.style.color = ''; e.target.textContent = '\u2713';
+      if (posto) posto.dispatchEvent(new Event('change'));
+    }
+  });
+});
+
+// ===== Checkbox "Possui Abono de Permanência" (só ativos), abaixo do breakdown =====
+document.addEventListener('DOMContentLoaded', function () {
+  const table = document.querySelector('table.breakdown');
+  if (!table) return;
+  const posto = document.getElementById('posto');
+  const box = document.createElement('div');
+  box.style.cssText = 'margin-top:16px; padding-top:14px; border-top:1px solid #e7eef6;';
+  box.innerHTML =
+    '<label for="abono-chk" style="display:flex;align-items:center;gap:10px;font-weight:700;cursor:pointer;font-size:13px;">' +
+      '<input type="checkbox" id="abono-chk"> Possui Abono de Permanência' +
+    '</label>' +
+    '<div class="hint" style="margin-top:6px;">Indenização igual à Contribuição Militar: devolve esse valor ao líquido e é tributável (entra na base do IRPF). Fica fora do abate-teto.</div>';
+  table.parentNode.insertBefore(box, table.nextSibling);
+  const chk = document.getElementById('abono-chk');
+  if (chk && posto) chk.addEventListener('change', function () { posto.dispatchEvent(new Event('change')); });
 });
