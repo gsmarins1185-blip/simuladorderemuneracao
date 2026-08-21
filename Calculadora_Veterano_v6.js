@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const nav = document.createElement('nav');
   nav.style.cssText = 'display:flex; gap:28px; justify-content:center; flex-wrap:wrap; ' +
     'max-width:1040px; margin:0 auto 18px; border-bottom:1px solid var(--borda, #e5e9f0);';
-  nav.appendChild(aba('Ativos', 'calculadora_pmerj.html'));
+  nav.appendChild(aba('Ativos', 'index.html'));
   nav.appendChild(aba('Veteranos', 'Calculadora_Veterano.html'));
 
   const wrap = document.querySelector('.wrap');
