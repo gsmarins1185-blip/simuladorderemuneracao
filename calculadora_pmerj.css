@@ -23,7 +23,7 @@
   .veteranosss {
     background: linear-gradient(130deg, #daacac 0%, #a77777e8 100%);
   }
-  .wrap { max-width: 880px; margin: 0 auto; }
+  .wrap { max-width: 1040px; margin: 0 auto; }
   header {
     background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
     color: #fff;
@@ -59,9 +59,9 @@
     box-shadow: var(--sombra);
   }
   .card h2 {
-    font-size: 11px;
+    font-size: 14px;
     text-transform: uppercase;
-    letter-spacing: 1.1px;
+    letter-spacing: 1px;
     color: var(--acento);
     font-weight: 800;
     margin-bottom: 18px;
@@ -126,7 +126,7 @@
     padding: 10px 12px;
     border: 1.5px solid var(--borda);
     border-radius: 10px;
-    font-size: 12.5px;
+    font-size: 11.5px;
     font-family: inherit;
     background: #fff;
     color: var(--texto);
@@ -240,4 +240,4 @@
   .diff-val { display: block; font-size: 22px; font-weight: 800; color: var(--verde); font-variant-numeric: tabular-nums; }
   .diff-panel.zero .diff-val { color: var(--texto-suave); }
   .diff-pct { display: block; font-size: 13px; font-weight: 700; color: var(--verde); opacity: 0.95; }
-  .diff-panel.zero .diff-pct { color: var(--texto-suave); }
+  .diff-panel.zero .diff-pct { color: var(--texto-suave); }
